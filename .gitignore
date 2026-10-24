@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+
+data/
+logs/
+models/
+pdfs/
+
+backup_before_update_*/
+aqui/
+aqui.zip
