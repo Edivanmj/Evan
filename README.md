@@ -1,3 +1,5 @@
+#EVAN OS — Edivan Virtual Assistente Nativo
+
 # EVAN OS
 
 EVAN OS é um assistente pessoal offline em Python, criado para funcionar no terminal e aprender com o usuário.
