@@ -2,6 +2,8 @@
 
 EVAN OS é um assistente pessoal offline em Python, criado para funcionar no terminal e aprender com o usuário.
 
+O projeto foi idealizado para se tornar mais do que um assistente virtual: um companheiro artificial capaz de conversar, aprender com as experiências, guardar lembranças e evoluir ao lado de seu criador ao longo dos anos.
+
 ## O que é o EVAN?
 EVAN significa Edivan Virtual Assistente Nativo.
 
