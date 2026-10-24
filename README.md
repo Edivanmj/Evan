@@ -84,3 +84,8 @@ corrija: meu nome é Edivan Mendonça
 ```bash
 python evan.py
 ```
+## Estalação futura
+
+pip install -r requirements.txt
+
+Esse ajuste serve para uma instalação nova, por exemplo em outro computador ou no futuro mini PC do robô, sem o pip tentar compilar tudo do zero.
