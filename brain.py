@@ -12,6 +12,7 @@ from learning import (
     parse_correction,
     parse_learning_content,
 )
+from llm import LocalLanguageModel, LocalModelError
 from personality import (
     correction_acknowledgement,
     greeting,
@@ -26,6 +27,7 @@ class EvanBrain:
         self.memory = MemoryStore(db_path) if db_path else MemoryStore()
         self.session_id = uuid.uuid4().hex[:8]
         self.short_term: deque = deque(maxlen=10)  # memória de curto prazo (RAM)
+        self.local_llm = LocalLanguageModel()
 
     def handle(self, user_text: str) -> str:
         """Processa uma fala, guardando-a no buffer de curto prazo e no histórico."""
@@ -115,7 +117,14 @@ class EvanBrain:
 
         # Perguntas sobre memória/conhecimento
         if self._is_question_about_memory(text):
-            return self._answer_from_memory(text)
+            response = self._answer_from_memory(text)
+            if response == unknown_response() or (
+                response == "Ainda não encontrei PDFs aprendidos na memória."
+                and "pdf" not in normalized
+                and "documento" not in normalized
+            ):
+                return self._respond_with_local_llm(text) or response
+            return response
 
         # Conversa básica
         basic_response = self._basic_conversation(text)
@@ -124,8 +133,30 @@ class EvanBrain:
             log_event(f"Resposta conversa básica: {basic_response}")
             return basic_response
 
+        response = self._respond_with_local_llm(text)
+        if response:
+            return response
+
         log_event(f"Resposta padrão: {unknown_response()}")
         return unknown_response()
+
+    def _respond_with_local_llm(self, text: str) -> str | None:
+        if not self.local_llm.available:
+            return None
+        try:
+            memories = self.memory.search_memories(text, limit=3)
+            response = self.local_llm.generate(
+                text,
+                history=list(self.short_term),
+                memories=memories,
+            )
+        except LocalModelError as erro:
+            log_event(f"Falha no modelo GGUF local: {erro}", "ERROR")
+            return f"Não consegui responder usando o modelo local. {erro}"
+
+        if response:
+            log_event("Resposta gerada pelo modelo GGUF local.")
+        return response
 
     def _system_status(self) -> str:
         db_path = getattr(self.memory, "db_path", "data/evan_memory.db")
@@ -461,6 +492,29 @@ class EvanBrain:
 
     def _answer_from_memory(self, question: str) -> str:
         normalized = normalize_text(question)
+        generic_explanations = (
+            "me explique",
+            "explique sobre",
+            "me ensine",
+            "ensina sobre",
+            "me ensina sobre",
+            "fale sobre",
+            "resuma sobre",
+            "resumo sobre",
+        )
+        if (
+            any(phrase in normalized for phrase in generic_explanations)
+            and "pdf" not in normalized
+            and "documento" not in normalized
+            and "memoria" not in normalized
+            and "memória" not in normalized
+        ):
+            matches = self.memory.search_memories(question, limit=3)
+            if matches:
+                first = matches[0]
+                return f"Eu lembro que {first['chave']} = {first['valor']}."
+            return unknown_response()
+
         if any(
             phrase in normalized
             for phrase in (
